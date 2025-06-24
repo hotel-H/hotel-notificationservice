@@ -35,6 +35,23 @@ try {
   console.error('❌ خطأ في تهيئة Firebase Admin SDK:', error);
 }
 
+// تخزين مؤقت للإشعارات المرسلة لتجنب التكرار
+const sentNotificationsCache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // ساعة واحدة بالمللي ثانية
+
+// دالة لتنظيف الذاكرة المؤقتة
+function cleanupCache() {
+  const now = Date.now();
+  for (const [key, timestamp] of sentNotificationsCache.entries()) {
+    if (now - timestamp > CACHE_TTL) {
+      sentNotificationsCache.delete(key);
+    }
+  }
+}
+
+// تنظيف الذاكرة المؤقتة كل ساعة
+setInterval(cleanupCache, CACHE_TTL);
+
 // طريق الصفحة الرئيسية
 app.get('/', (req, res) => {
   res.send({
@@ -52,6 +69,11 @@ app.get('/', (req, res) => {
 // طريق للتحقق من حالة الخدمة
 app.get('/health', (req, res) => {
   res.send({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// طريق للحفاظ على الخدمة نشطة على Glitch
+app.get('/keep-alive', (req, res) => {
+  res.send({ status: 'alive', timestamp: new Date().toISOString() });
 });
 
 // طريق لإرسال إشعار إلى موضوع معين
@@ -78,6 +100,21 @@ app.post('/send-notification', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     
+    // إنشاء مفتاح فريد للإشعار
+    const notificationKey = `${topic}-${title}-${body}-${JSON.stringify(data)}`;
+    
+    // التحقق من وجود الإشعار في الذاكرة المؤقتة
+    if (sentNotificationsCache.has(notificationKey)) {
+      console.log(`⚠️ تم تجاهل إشعار مكرر: ${title}`);
+      return res.status(200).send({
+        success: true,
+        cached: true,
+        topic,
+        timestamp: new Date().toISOString(),
+        message: 'تم تجاهل الإشعار المكرر'
+      });
+    }
+    
     // إرسال الإشعار
     const message = {
       notification: {
@@ -97,6 +134,9 @@ app.post('/send-notification', async (req, res) => {
     
     const response = await admin.messaging().send(message);
     console.log(`✅ تم إرسال الإشعار بنجاح: ${response}`);
+    
+    // تخزين الإشعار في الذاكرة المؤقتة
+    sentNotificationsCache.set(notificationKey, Date.now());
     
     res.status(200).send({
       success: true,
@@ -192,6 +232,20 @@ app.post('/send-to-device', async (req, res) => {
     
     console.log(`📤 إرسال إشعار إلى الجهاز: ${token.substring(0, 10)}...`);
     
+    // إنشاء مفتاح فريد للإشعار
+    const notificationKey = `${token}-${title}-${body}-${JSON.stringify(data)}`;
+    
+    // التحقق من وجود الإشعار في الذاكرة المؤقتة
+    if (sentNotificationsCache.has(notificationKey)) {
+      console.log(`⚠️ تم تجاهل إشعار مكرر: ${title}`);
+      return res.status(200).send({
+        success: true,
+        cached: true,
+        timestamp: new Date().toISOString(),
+        message: 'تم تجاهل الإشعار المكرر'
+      });
+    }
+    
     // إرسال الإشعار
     const message = {
       notification: {
@@ -215,6 +269,9 @@ app.post('/send-to-device', async (req, res) => {
     
     const response = await admin.messaging().send(message);
     console.log(`✅ تم إرسال الإشعار بنجاح: ${response}`);
+    
+    // تخزين الإشعار في الذاكرة المؤقتة
+    sentNotificationsCache.set(notificationKey, Date.now());
     
     res.status(200).send({
       success: true,

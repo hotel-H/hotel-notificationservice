@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 
-// عنوان خدمة الإشعارات على Render
-const String NOTIFICATION_SERVICE_URL = 'https://your-service-name.onrender.com';
+// عنوان خدمة الإشعارات على Glitch
+const String NOTIFICATION_SERVICE_URL = 'https://your-project-name.glitch.me';
 
 class NotificationService {
   // الحصول على رمز FCM وتسجيله في موضوع الفندق

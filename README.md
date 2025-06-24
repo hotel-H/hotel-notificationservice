@@ -9,6 +9,7 @@
 - إلغاء اشتراك الأجهزة من الموضوعات
 - إرسال إشعارات مباشرة إلى أجهزة محددة
 - دعم قنوات الإشعارات المختلفة
+- تجنب تكرار الإشعارات باستخدام نظام التخزين المؤقت
 
 ## المتطلبات
 
@@ -112,6 +113,23 @@ POST /send-to-device
    - `PORT`: 10000 (أو أي منفذ آخر تفضله)
    - `FIREBASE_CREDENTIALS`: بيانات اعتماد Firebase الخاصة بك (كسلسلة JSON)
 
+## النشر على Glitch
+
+1. قم بإنشاء مشروع جديد على Glitch.com
+2. يمكنك استيراد المشروع من GitHub أو رفع الملفات مباشرة
+3. تأكد من وجود ملف `.env` مع المتغيرات البيئية التالية:
+   - `PORT`: 3000 (Glitch يستخدم هذا المنفذ تلقائيًا)
+   - `FIREBASE_CREDENTIALS`: بيانات اعتماد Firebase الخاصة بك (كسلسلة JSON)
+4. بعد النشر، سيكون عنوان الخدمة الخاص بك: `https://your-project-name.glitch.me`
+5. تأكد من تحديث `NOTIFICATION_SERVICE_URL` في تطبيق Flutter الخاص بك
+
+### ملاحظات هامة عند استخدام Glitch
+
+- Glitch يدخل في وضع السكون بعد 5 دقائق من عدم النشاط
+- يمكنك استخدام خدمة مثل UptimeRobot للحفاظ على الخدمة نشطة
+- تأكد من تحديث بيانات اعتماد Firebase في ملف `.env` وليس في الكود مباشرة
+- يمكنك مراقبة سجلات الخدمة من خلال واجهة Glitch
+
 ## استخدام الخدمة مع تطبيق Flutter
 
 يمكن استخدام هذه الخدمة مع تطبيق Flutter عن طريق:
@@ -127,7 +145,7 @@ Future<void> subscribeToHotelTopic(String hotelId) async {
   final String topic = 'hotel_$hotelId';
   
   final response = await http.post(
-    Uri.parse('https://your-render-service.onrender.com/subscribe'),
+    Uri.parse('https://your-project-name.glitch.me/subscribe'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'token': token,
